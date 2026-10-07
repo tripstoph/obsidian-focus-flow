@@ -176,8 +176,42 @@ export function trimContextAfter(slice: string, truncated: boolean): string {
   return slice.slice(0, index);
 }
 
-export function editTargetsBoundNote(boundPath: string | null, path: string | null): boolean {
-  return boundPath != null && path === boundPath;
+export function isMarkdownPath(path: string): boolean {
+  return path.toLowerCase().endsWith(".md");
+}
+
+export class VaultLedger {
+  private constructor(private readonly files: ReadonlyMap<string, WordLedger>) {}
+
+  static empty(): VaultLedger {
+    return new VaultLedger(new Map());
+  }
+
+  file(path: string): WordLedger | undefined {
+    return this.files.get(path);
+  }
+
+  replace(path: string, ledger: WordLedger): VaultLedger {
+    const next = new Map(this.files);
+    next.set(path, ledger);
+    return new VaultLedger(next);
+  }
+
+  rename(from: string, to: string): VaultLedger {
+    const current = this.files.get(from);
+    if (!current || from === to) return this;
+    const next = new Map(this.files);
+    next.delete(from);
+    next.set(to, current);
+    return new VaultLedger(next);
+  }
+
+  drop(path: string): VaultLedger {
+    if (!this.files.has(path)) return this;
+    const next = new Map(this.files);
+    next.delete(path);
+    return new VaultLedger(next);
+  }
 }
 
 export function editInDocument(

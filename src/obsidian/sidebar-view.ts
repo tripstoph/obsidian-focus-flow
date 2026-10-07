@@ -78,7 +78,7 @@ export class FocusFlowView extends ItemView {
   private buildIdle(): void {
     const root = this.contentEl.createDiv({ cls: "focus-flow" });
     root.createEl("p", { cls: "focus-flow-mobile-summary" });
-    root.createEl("h3", { cls: "focus-flow-file", text: "Open a note to begin" });
+    root.createEl("h3", { cls: "focus-flow-file", text: "Every note in the vault counts" });
     const actions = root.createDiv({ cls: "focus-flow-actions" });
     const resume = actions.createEl("button", {
       text: "Resume session",
@@ -102,7 +102,7 @@ export class FocusFlowView extends ItemView {
     const root = this.contentEl.querySelector(".focus-flow");
     if (!root) return;
     const file = root.querySelector(".focus-flow-file");
-    if (file) file.setText(model.activeFileName ?? "Open a note to begin");
+    if (file) file.setText("Every note in the vault counts");
     const resume = root.querySelector(".focus-flow-resume");
     if (resume) resume.toggleClass("is-hidden", !model.resumeAvailable);
     const start = root.querySelector(".focus-flow-start");
@@ -160,7 +160,7 @@ export class FocusFlowView extends ItemView {
     refs.tone.setText(model.tone);
     refs.actual.setText(`Sprint words ${model.actualWords}`);
     refs.target.setText(`Ghost target ${formatTarget(model.targetWords)}`);
-    refs.note.setText(model.missingNote ? "That note is no longer in the vault." : (model.boundName ?? ""));
+    refs.note.setText(model.missingNote ? "That note is no longer in the vault." : "Whole vault");
     refs.resync.setText(
       model.resynced ? "Tracking resynced. Earlier text you delete will not change the counter." : "",
     );

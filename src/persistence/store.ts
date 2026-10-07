@@ -43,7 +43,6 @@ export function toSnapshot(state: SessionState, now: number): ActiveSessionSnaps
   if (
     (state.status !== "RUNNING" && state.status !== "PAUSED") ||
     state.phase == null ||
-    state.boundPath == null ||
     state.startedAt == null
   ) {
     return null;
@@ -55,7 +54,7 @@ export function toSnapshot(state: SessionState, now: number): ActiveSessionSnaps
   return {
     status: state.status,
     phase: state.phase,
-    boundPath: state.boundPath,
+    boundPath: state.boundPath ?? "",
     credit: state.credit,
     burstWords: state.burstWords,
     elapsedTrackingMs: trackingMs(state, now),
@@ -86,7 +85,7 @@ export function sessionFromSnapshot(snapshot: ActiveSessionSnapshot, now: number
     ...idleSession(),
     status: snapshot.status,
     phase: snapshot.phase,
-    boundPath: snapshot.boundPath,
+    boundPath: snapshot.boundPath.length > 0 ? snapshot.boundPath : null,
     startedAt: snapshot.startedAt,
     remainingMs: snapshot.remainingMs,
     segmentCountsTowardTarget: snapshot.segmentCountsTowardTarget,
@@ -136,7 +135,7 @@ function sanitizeSnapshot(value: unknown): ActiveSessionSnapshot | null {
   if ((raw.status !== "RUNNING" && raw.status !== "PAUSED") || (raw.phase !== "THINKING" && raw.phase !== "WRITING")) {
     return null;
   }
-  if (typeof raw.boundPath !== "string" || raw.boundPath.length === 0) return null;
+  if (typeof raw.boundPath !== "string") return null;
   if (typeof raw.startedAt !== "number") return null;
   return {
     status: raw.status,

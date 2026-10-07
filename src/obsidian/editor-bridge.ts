@@ -2,8 +2,8 @@ import { editorInfoField } from "obsidian";
 import type { Extension, Transaction } from "@codemirror/state";
 import { ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import {
-  editTargetsBoundNote,
   frontmatterEnd,
+  isMarkdownPath,
   trimContextAfter,
   trimContextBefore,
   type PreparedEdit,
@@ -11,7 +11,6 @@ import {
 } from "../engine/word-ledger";
 
 export interface EditorGate {
-  boundPath: string | null;
   listening: boolean;
   onEdit: (edit: PreparedEdit) => void;
 }
@@ -20,12 +19,12 @@ export function createEditorExtension(gate: EditorGate): Extension {
   return ViewPlugin.fromClass(
     class {
       update(update: ViewUpdate): void {
-        if (!update.docChanged || !gate.listening || gate.boundPath == null) return;
+        if (!update.docChanged || !gate.listening || !update.view.hasFocus) return;
         for (const transaction of update.transactions) {
           if (!transaction.docChanged) continue;
           const info = transaction.startState.field(editorInfoField, false);
           const path = info?.file?.path ?? null;
-          if (!editTargetsBoundNote(gate.boundPath, path) || path == null) continue;
+          if (path == null || !isMarkdownPath(path)) continue;
           gate.onEdit(editFromTransaction(transaction, path));
         }
       }

@@ -109,7 +109,7 @@ function advance(state: SessionState, at: number, config: SessionConfig): StepRe
 export function startSession(
   config: SessionConfig,
   now: number,
-  boundPath: string,
+  boundPath: string | null,
   docLength: number,
 ): StepResult {
   const state = enterPhase(

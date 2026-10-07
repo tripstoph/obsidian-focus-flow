@@ -18,7 +18,7 @@ import { displayTrackingMs, targetWords } from "./engine/ghost";
 import { applyEngineEvents, applyMarathon, applySprintPace, applyVolume } from "./engine/records";
 import { sprintPaceWph } from "./engine/sprint-pace";
 import { applyEdit } from "./engine/session";
-import { WordLedger, type PreparedEdit } from "./engine/word-ledger";
+import { VaultLedger, type PreparedEdit } from "./engine/word-ledger";
 import { appendCallout } from "./obsidian/callout";
 import { createEditorExtension, type EditorGate } from "./obsidian/editor-bridge";
 import { FocusFlowView } from "./obsidian/sidebar-view";
@@ -46,7 +46,7 @@ export default class FocusFlowPlugin extends Plugin {
   settings = configSettings();
   private data: PersistedData = migrate(null);
   private session: SessionState = idleSession();
-  private ledger: WordLedger = WordLedger.empty(0);
+  private ledger: VaultLedger = VaultLedger.empty();
   private records: HighScores = this.data.records;
   private history: SessionRecord[] = [];
   private pending: ActiveSessionSnapshot | null = null;
@@ -60,7 +60,6 @@ export default class FocusFlowPlugin extends Plugin {
   private readonly watched = new Set<Document>();
   private readonly editorExtension: Extension[] = [];
   private readonly gate: EditorGate = {
-    boundPath: null,
     listening: false,
     onEdit: () => {},
   };
@@ -119,10 +118,6 @@ export default class FocusFlowPlugin extends Plugin {
           this.watched.delete(popup.document);
         }),
       );
-      if (this.pending) {
-        const file = this.app.vault.getFileByPath(normalizePath(this.pending.boundPath));
-        if (!(file instanceof TFile)) this.pending = null;
-      }
       this.refresh();
     });
   }
@@ -157,9 +152,9 @@ export default class FocusFlowPlugin extends Plugin {
     return {
       status: this.session.status,
       phase: this.session.phase,
-      boundName: this.session.boundPath ? baseName(this.session.boundPath) : null,
+      boundName: "Whole vault",
       activeFileName: activeFile ? baseName(activeFile.path) : null,
-      canStart: this.session.status === "IDLE" && activeFile != null,
+      canStart: this.session.status === "IDLE",
       resumeAvailable: this.pending != null && this.session.status === "IDLE",
       remainingMs: currentRemainingMs(this.session, now),
       intervalDurationMs: this.session.intervalDurationMs,
@@ -181,38 +176,26 @@ export default class FocusFlowPlugin extends Plugin {
 
   start(): void {
     if (this.session.status !== "IDLE") return;
-    const view = this.writingView();
-    const file = view?.file;
-    if (!view || !file || !view.editor) return;
     this.chime.unlock();
     this.pending = null;
     this.debrief = null;
     this.completedPath = null;
     this.recordsAtStart = { ...this.records };
-    const length = view.editor.getValue().length;
+    const view = this.writingView();
+    const path = view?.file ? normalizePath(view.file.path) : null;
     const now = Date.now();
     this.lastTick = now;
-    this.ledger = WordLedger.empty(length);
-    const step = startSession(configFromSettings(this.settings), now, normalizePath(file.path), length);
+    this.ledger = VaultLedger.empty();
+    const step = startSession(configFromSettings(this.settings), now, path, 0);
     this.adopt(step.state, this.ledger, step.events, now);
   }
 
   resumeSaved(): void {
     if (!this.pending || this.session.status !== "IDLE") return;
-    const file = this.app.vault.getFileByPath(normalizePath(this.pending.boundPath));
-    if (!(file instanceof TFile)) {
-      this.pending = null;
-      void this.persistNow();
-      this.refresh();
-      return;
-    }
     this.chime.unlock();
     const now = Date.now();
-    let state = sessionFromSnapshot(this.pending, now);
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    const length = view?.file?.path === file.path && view.editor ? view.editor.getValue().length : state.docLength;
-    state = { ...state, docLength: length, boundPath: normalizePath(file.path) };
-    this.ledger = WordLedger.empty(length);
+    const state = { ...sessionFromSnapshot(this.pending, now), missingNote: false };
+    this.ledger = VaultLedger.empty();
     this.recordsAtStart = { ...this.records };
     this.pending = null;
     this.debrief = null;
@@ -259,13 +242,15 @@ export default class FocusFlowPlugin extends Plugin {
     this.debrief = null;
     this.completedPath = null;
     this.pending = null;
-    this.ledger = WordLedger.empty(0);
+    this.ledger = VaultLedger.empty();
     this.adopt(step.state, this.ledger, step.events, Date.now());
   }
 
   async insertCallout(): Promise<void> {
-    if (!this.debrief || !this.completedPath) return;
-    await appendCallout(this.app, this.completedPath, this.debrief.callout);
+    if (!this.debrief) return;
+    const path = this.writingView()?.file?.path ?? this.completedPath;
+    if (!path) return;
+    await appendCallout(this.app, path, this.debrief.callout);
   }
 
   openSettings(): void {
@@ -302,7 +287,7 @@ export default class FocusFlowPlugin extends Plugin {
       id: "start-session",
       name: "Start session",
       checkCallback: (checking) => {
-        const ready = this.session.status === "IDLE" && this.writingView() != null;
+        const ready = this.session.status === "IDLE";
         if (ready && !checking) this.start();
         return ready;
       },
@@ -381,7 +366,7 @@ export default class FocusFlowPlugin extends Plugin {
     this.adopt(step.state, step.ledger, step.events, now);
   }
 
-  private adopt(state: SessionState, ledger: WordLedger, events: EngineEvent[], now: number): void {
+  private adopt(state: SessionState, ledger: VaultLedger, events: EngineEvent[], now: number): void {
     const phaseBefore = this.session.phase;
     const statusBefore = this.session.status;
     this.session = state;
@@ -391,7 +376,6 @@ export default class FocusFlowPlugin extends Plugin {
     records = applyVolume(records, state.credit, now);
     records = applyMarathon(records, activeMs(state, now), now);
     this.records = records;
-    this.gate.boundPath = state.boundPath;
     this.gate.listening = state.status === "RUNNING" || state.status === "PAUSED";
 
     for (const event of events) {
@@ -403,7 +387,7 @@ export default class FocusFlowPlugin extends Plugin {
         void this.chime.play("goal");
         if (state.status !== "COMPLETED") this.celebrateUntil = now + 1600;
       } else if (event.type === "completed") {
-        this.completedPath = state.boundPath ?? this.completedPath;
+        this.completedPath = this.writingView()?.file?.path ?? state.boundPath ?? this.completedPath;
         this.debrief = this.makeDebrief(state);
         this.history = pushHistory(this.history, this.makeRecord(state, now));
         this.celebrateUntil = 0;
@@ -527,10 +511,8 @@ export default class FocusFlowPlugin extends Plugin {
   private hiddenAt: number | null = null;
 
   private renameBound(from: string, to: string): void {
-    if (this.session.boundPath === from) {
-      this.session = { ...this.session, boundPath: to };
-      this.gate.boundPath = to;
-    }
+    this.ledger = this.ledger.rename(from, to);
+    if (this.session.boundPath === from) this.session = { ...this.session, boundPath: to };
     if (this.lastNotePath === from) this.lastNotePath = to;
     if (this.pending?.boundPath === from) this.pending = { ...this.pending, boundPath: to };
     if (this.completedPath === from) this.completedPath = to;
@@ -539,16 +521,10 @@ export default class FocusFlowPlugin extends Plugin {
   }
 
   private forgetBound(path: string): void {
-    if (this.pending?.boundPath === path) this.pending = null;
+    this.ledger = this.ledger.drop(path);
     if (this.lastNotePath === path) this.lastNotePath = null;
-    if (this.session.boundPath !== path) {
-      this.refresh();
-      return;
-    }
-    if (this.session.status !== "RUNNING" && this.session.status !== "PAUSED") return;
-    const now = Date.now();
-    const paused = this.session.status === "RUNNING" ? pauseSession(this.session, now).state : this.session;
-    this.adopt({ ...paused, missingNote: true }, this.ledger, [], now);
+    if (this.completedPath === path) this.completedPath = null;
+    this.refresh();
   }
 
   private refresh(): void {

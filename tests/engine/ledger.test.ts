@@ -2,21 +2,21 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { endSession, skipSession, startSession, type EngineEvent } from "../../src/engine/fsm";
 import { applyEdit } from "../../src/engine/session";
-import { editInDocument, frontmatterEnd, WordLedger, type PreparedEdit } from "../../src/engine/word-ledger";
+import { editInDocument, frontmatterEnd, VaultLedger, type PreparedEdit } from "../../src/engine/word-ledger";
 import { configFromSettings, DEFAULT_SETTINGS, type SessionConfig, type SessionState } from "../../src/types";
 
 function config(overrides: Partial<SessionConfig> = {}): SessionConfig {
   return { ...configFromSettings(DEFAULT_SETTINGS), ...overrides };
 }
 
-function beginWriting(doc: string, path = "note.md"): { state: SessionState; ledger: WordLedger; pace: SessionConfig } {
+function beginWriting(doc: string, path = "note.md"): { state: SessionState; ledger: VaultLedger; pace: SessionConfig } {
   const pace = config();
   const started = startSession(pace, 0, path, doc.length);
   const writing = skipSession(started.state, pace, 0);
-  return { state: writing.state, ledger: WordLedger.empty(doc.length), pace };
+  return { state: writing.state, ledger: VaultLedger.empty(), pace };
 }
 
-function type(state: SessionState, ledger: WordLedger, pace: SessionConfig, doc: string, edit: PreparedEdit, now = 0) {
+function type(state: SessionState, ledger: VaultLedger, pace: SessionConfig, doc: string, edit: PreparedEdit, now = 0) {
   return applyEdit(state, ledger, pace, edit, now);
 }
 
@@ -41,7 +41,7 @@ describe("authored spans", () => {
     const pace = config();
     let doc = "";
     let state = startSession(pace, 0, "note.md", 0).state;
-    let ledger = WordLedger.empty(0);
+    let ledger = VaultLedger.empty();
     let step = type(state, ledger, pace, doc, editInDocument(doc, 0, 0, "outline one"));
     assert.equal(step.state.credit, 0);
     assert.equal(step.state.phase, "THINKING");
@@ -73,12 +73,19 @@ describe("authored spans", () => {
     assert.equal(ended.state.peakIntervalWph, 0);
   });
 
-  it("ignores an edit in a different note", () => {
-    const doc = "alpha";
+  it("credits writing in a second note and keeps each note's deletes separate", () => {
+    let doc = "alpha";
     const { state, ledger, pace } = beginWriting(doc, "note.md");
-    const step = type(state, ledger, pace, doc, editInDocument(doc, doc.length, doc.length, " beta", "other.md"));
-    assert.equal(step.state.credit, 0);
-    assert.equal(step.ledger, ledger);
+    let step = type(state, ledger, pace, doc, editInDocument(doc, doc.length, doc.length, " beta", "note.md"));
+    assert.equal(step.state.credit, 1);
+
+    const other = "";
+    step = type(step.state, step.ledger, pace, other, editInDocument(other, 0, 0, "gamma delta", "other.md"));
+    assert.equal(step.state.credit, 3);
+
+    const otherDoc = "gamma delta";
+    step = type(step.state, step.ledger, pace, otherDoc, editInDocument(otherDoc, 0, "gamma".length, "", "other.md"));
+    assert.equal(step.state.credit, 2);
   });
 
   it("ignores an edit that stays inside frontmatter", () => {
@@ -93,14 +100,15 @@ describe("authored spans", () => {
   it("keeps credit and clears spans when the document length disagrees", () => {
     const doc = "hello";
     const { state, ledger, pace } = beginWriting(doc);
-    const credited = { ...state, credit: 5 };
+    const seen = type(state, ledger, pace, doc, editInDocument(doc, 0, 0, ""));
+    const credited = { ...seen.state, credit: 5 };
     const mismatched = editInDocument(doc, doc.length, doc.length, " there");
     mismatched.oldLength = doc.length + 3;
-    const step = type(credited, ledger, pace, doc, mismatched);
+    const step = type(credited, seen.ledger, pace, doc, mismatched);
     assert.equal(step.state.credit, 5);
     assert.equal(step.state.resynced, true);
     let spanCount = 0;
-    step.ledger.spans.between(0, 100, () => {
+    step.ledger.file("note.md")?.spans.between(0, 100, () => {
       spanCount += 1;
     });
     assert.equal(spanCount, 0);
@@ -110,7 +118,7 @@ describe("authored spans", () => {
     const pace = config();
     let doc = "";
     let state = skipSession(startSession(pace, 0, "note.md", 0).state, pace, 0).state;
-    let ledger = WordLedger.empty(0);
+    let ledger = VaultLedger.empty();
     let step = type(state, ledger, pace, doc, editInDocument(doc, 0, 0, "one two"));
     assert.equal(step.state.credit, 2);
     assert.equal(step.state.writingGeneration, 1);
