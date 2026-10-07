@@ -1,0 +1,237 @@
+body {
+  --focus-flow-ahead: #0f7a4a;
+  --focus-flow-even: #526272;
+  --focus-flow-behind: #9a6408;
+}
+
+body.theme-dark {
+  --focus-flow-ahead: #5eecc0;
+  --focus-flow-even: #9eb0c2;
+  --focus-flow-behind: #e6b15a;
+}
+
+.focus-flow {
+  color: var(--text-normal);
+  padding: 4px 2px 12px;
+}
+
+.focus-flow-pace,
+.focus-flow-phase,
+.focus-flow-clock,
+.focus-flow-tone,
+.focus-flow-note,
+.focus-flow-resync,
+.focus-flow-goal-line,
+.focus-flow-burst,
+.focus-flow-banner,
+.focus-flow-mobile-summary {
+  margin: 0.4em 0;
+}
+
+.focus-flow-mobile-summary {
+  display: none;
+  font-weight: 600;
+}
+
+body.is-mobile .focus-flow-mobile-summary {
+  display: block;
+}
+
+.focus-flow-clock {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.4em;
+}
+
+.focus-flow.is-zen .focus-flow-clock {
+  display: none;
+}
+
+.focus-flow-bar {
+  height: 8px;
+  margin: 8px 0 12px;
+  border-radius: 99px;
+  background: var(--background-modifier-border);
+  overflow: hidden;
+}
+
+.focus-flow-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--interactive-accent);
+}
+
+.focus-flow-bar.is-p0 .focus-flow-bar-fill { width: 0%; }
+.focus-flow-bar.is-p1 .focus-flow-bar-fill { width: 5%; }
+.focus-flow-bar.is-p2 .focus-flow-bar-fill { width: 10%; }
+.focus-flow-bar.is-p3 .focus-flow-bar-fill { width: 15%; }
+.focus-flow-bar.is-p4 .focus-flow-bar-fill { width: 20%; }
+.focus-flow-bar.is-p5 .focus-flow-bar-fill { width: 25%; }
+.focus-flow-bar.is-p6 .focus-flow-bar-fill { width: 30%; }
+.focus-flow-bar.is-p7 .focus-flow-bar-fill { width: 35%; }
+.focus-flow-bar.is-p8 .focus-flow-bar-fill { width: 40%; }
+.focus-flow-bar.is-p9 .focus-flow-bar-fill { width: 45%; }
+.focus-flow-bar.is-p10 .focus-flow-bar-fill { width: 50%; }
+.focus-flow-bar.is-p11 .focus-flow-bar-fill { width: 55%; }
+.focus-flow-bar.is-p12 .focus-flow-bar-fill { width: 60%; }
+.focus-flow-bar.is-p13 .focus-flow-bar-fill { width: 65%; }
+.focus-flow-bar.is-p14 .focus-flow-bar-fill { width: 70%; }
+.focus-flow-bar.is-p15 .focus-flow-bar-fill { width: 75%; }
+.focus-flow-bar.is-p16 .focus-flow-bar-fill { width: 80%; }
+.focus-flow-bar.is-p17 .focus-flow-bar-fill { width: 85%; }
+.focus-flow-bar.is-p18 .focus-flow-bar-fill { width: 90%; }
+.focus-flow-bar.is-p19 .focus-flow-bar-fill { width: 95%; }
+.focus-flow-bar.is-p20 .focus-flow-bar-fill { width: 100%; }
+
+.focus-flow-hero {
+  position: relative;
+  margin: 12px 0;
+  text-align: center;
+}
+
+.focus-flow.is-paused .focus-flow-hero {
+  opacity: 0.55;
+}
+
+.focus-flow-delta {
+  margin: 0;
+  font-size: 2.4em;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-flow-delta.is-ahead,
+.focus-flow-tone.is-ahead,
+.focus-flow-status.is-ahead {
+  color: var(--focus-flow-ahead);
+}
+
+.focus-flow-delta.is-even,
+.focus-flow-tone.is-even,
+.focus-flow-status.is-even {
+  color: var(--focus-flow-even);
+}
+
+.focus-flow-delta.is-behind,
+.focus-flow-tone.is-behind,
+.focus-flow-status.is-behind {
+  color: var(--focus-flow-behind);
+}
+
+.focus-flow-tone {
+  text-transform: lowercase;
+}
+
+.focus-flow-counts p {
+  margin: 0.2em 0;
+}
+
+.focus-flow-controls,
+.focus-flow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.focus-flow-button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.focus-flow-button:disabled {
+  opacity: 0.5;
+}
+
+.focus-flow-records,
+.focus-flow-debrief,
+.focus-flow-broken {
+  margin: 0.4em 0 0.8em;
+  padding-left: 1.2em;
+}
+
+.focus-flow-banner {
+  font-size: 1.2em;
+  font-weight: 650;
+}
+
+.focus-flow-particle {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--focus-flow-ahead);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.focus-flow.is-celebrating .focus-flow-hero {
+  animation: focus-flow-glow 1.6s ease-out;
+}
+
+.focus-flow.is-celebrating .focus-flow-particle {
+  animation-name: focus-flow-rise;
+  animation-duration: 1.4s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+.focus-flow-hero .focus-flow-particle:nth-child(3) { --focus-flow-x: -48px; animation-delay: 0s; }
+.focus-flow-hero .focus-flow-particle:nth-child(4) { --focus-flow-x: -32px; animation-delay: 0.05s; }
+.focus-flow-hero .focus-flow-particle:nth-child(5) { --focus-flow-x: -16px; animation-delay: 0.1s; }
+.focus-flow-hero .focus-flow-particle:nth-child(6) { --focus-flow-x: 0px; animation-delay: 0.02s; }
+.focus-flow-hero .focus-flow-particle:nth-child(7) { --focus-flow-x: 16px; animation-delay: 0.08s; }
+.focus-flow-hero .focus-flow-particle:nth-child(8) { --focus-flow-x: 32px; animation-delay: 0.12s; }
+.focus-flow-hero .focus-flow-particle:nth-child(9) { --focus-flow-x: 48px; animation-delay: 0.04s; }
+.focus-flow-hero .focus-flow-particle:nth-child(10) { --focus-flow-x: 8px; animation-delay: 0.16s; }
+
+.status-bar-item.is-celebrating {
+  animation: focus-flow-glow 1.6s ease-out;
+}
+
+.focus-flow .is-hidden {
+  display: none;
+}
+
+@keyframes focus-flow-rise {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--focus-flow-x), -36px);
+  }
+}
+
+@keyframes focus-flow-glow {
+  0% {
+    filter: brightness(1);
+  }
+  30% {
+    filter: brightness(1.25);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-flow-particle {
+    display: none;
+  }
+
+  .focus-flow.is-celebrating .focus-flow-hero,
+  .status-bar-item.is-celebrating {
+    animation: none;
+  }
+}
