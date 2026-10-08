@@ -1,7 +1,7 @@
 {
   "id": "focus-flow",
   "name": "Focus Flow",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "1.7.2",
   "description": "Pace a writing session against a gentle words-per-hour ghost, with thinking and writing intervals.",
   "author": "tripstoph",
