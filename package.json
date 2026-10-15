@@ -1,13 +1,13 @@
 {
   "name": "focus-flow",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
-  "description": "Pace a writing session against a gentle words-per-hour ghost, with thinking and writing intervals.",
+  "description": "Pace a writing session against a gentle words-per-hour ghost.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "test": "node --import tsx --test tests/engine/format.test.ts tests/engine/clock.test.ts tests/engine/ledger.test.ts tests/engine/goals.test.ts tests/engine/records.test.ts tests/engine/contrast.test.ts tests/engine/ghost.test.ts tests/engine/sprint-pace.test.ts",
+    "test": "node --import tsx --test tests/engine/format.test.ts tests/engine/clock.test.ts tests/engine/ledger.test.ts tests/engine/records.test.ts tests/engine/contrast.test.ts tests/engine/ghost.test.ts tests/engine/sprint-pace.test.ts",
     "lint": "eslint . --max-warnings 0"
   },
   "license": "MIT",

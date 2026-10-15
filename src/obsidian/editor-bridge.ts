@@ -1,5 +1,5 @@
 import { editorInfoField } from "obsidian";
-import type { Extension, Transaction } from "@codemirror/state";
+import { Transaction, type Extension } from "@codemirror/state";
 import { ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import {
   frontmatterEnd,
@@ -19,9 +19,9 @@ export function createEditorExtension(gate: EditorGate): Extension {
   return ViewPlugin.fromClass(
     class {
       update(update: ViewUpdate): void {
-        if (!update.docChanged || !gate.listening || !update.view.hasFocus) return;
+        if (!update.docChanged || !gate.listening) return;
         for (const transaction of update.transactions) {
-          if (!transaction.docChanged) continue;
+          if (!transaction.docChanged || transaction.annotation(Transaction.userEvent) == null) continue;
           const info = transaction.startState.field(editorInfoField, false);
           const path = info?.file?.path ?? null;
           if (path == null || !isMarkdownPath(path)) continue;

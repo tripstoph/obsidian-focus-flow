@@ -1,4 +1,4 @@
-import { activeMs, currentRemainingMs, thawClock, trackingMs, writingMs } from "../engine/clock";
+import { trackingMs } from "../engine/clock";
 import { sanitizeSettings } from "../engine/validate";
 import {
   emptyRecords,
@@ -40,77 +40,31 @@ export function pushHistory(history: SessionRecord[], record: SessionRecord): Se
 }
 
 export function toSnapshot(state: SessionState, now: number): ActiveSessionSnapshot | null {
-  if (
-    (state.status !== "RUNNING" && state.status !== "PAUSED") ||
-    state.phase == null ||
-    state.startedAt == null
-  ) {
-    return null;
-  }
-  const writingElapsed =
-    state.phase === "WRITING" && state.status === "RUNNING" && state.segmentStartedAt != null
-      ? Math.max(0, now - state.segmentStartedAt)
-      : 0;
+  if (state.status !== "RUNNING" || state.startedAt == null) return null;
   return {
-    status: state.status,
-    phase: state.phase,
+    status: "RUNNING",
     boundPath: state.boundPath ?? "",
     credit: state.credit,
     burstWords: state.burstWords,
     elapsedTrackingMs: trackingMs(state, now),
-    accumulatedActiveMs: activeMs(state, now),
-    remainingMs: currentRemainingMs(state, now),
-    roundsCompleted: state.roundsCompleted,
-    peakIntervalWph: state.peakIntervalWph,
-    intervalWords: state.intervalWords,
-    intervalBurstWords: state.intervalBurstWords,
-    intervalWritingMs: state.intervalWritingMs + writingElapsed,
-    trackingAtRoundStart: state.trackingAtRoundStart,
-    creditAtIntervalStart: state.creditAtIntervalStart,
-    writingGeneration: state.writingGeneration,
-    goalCelebrated: state.goalCelebrated,
     startedAt: state.startedAt,
     savedAt: now,
-    segmentCountsTowardTarget: state.segmentCountsTowardTarget,
-    intervalDurationMs: state.intervalDurationMs,
-    docLength: state.docLength,
-    missingNote: state.missingNote,
-    accumulatedWritingMs: writingMs(state, now),
     sprintPoints: state.sprintPoints,
   };
 }
 
 export function sessionFromSnapshot(snapshot: ActiveSessionSnapshot, now: number): SessionState {
-  const restored: SessionState = {
+  return {
     ...idleSession(),
-    status: snapshot.status,
-    phase: snapshot.phase,
+    status: "RUNNING",
     boundPath: snapshot.boundPath.length > 0 ? snapshot.boundPath : null,
     startedAt: snapshot.startedAt,
-    remainingMs: snapshot.remainingMs,
-    segmentCountsTowardTarget: snapshot.segmentCountsTowardTarget,
+    segmentStartedAt: now,
     accumulatedTrackingMs: snapshot.elapsedTrackingMs,
-    accumulatedActiveMs: snapshot.accumulatedActiveMs,
-    intervalDurationMs: snapshot.intervalDurationMs,
-    intervalWritingMs: snapshot.intervalWritingMs,
-    intervalWords: snapshot.intervalWords,
-    intervalBurstWords: snapshot.intervalBurstWords,
     credit: snapshot.credit,
     burstWords: snapshot.burstWords,
-    creditAtIntervalStart: snapshot.creditAtIntervalStart,
-    trackingAtRoundStart: snapshot.trackingAtRoundStart,
-    roundsCompleted: snapshot.roundsCompleted,
-    writingGeneration: snapshot.writingGeneration,
-    peakIntervalWph: snapshot.peakIntervalWph,
-    goalCelebrated: snapshot.goalCelebrated,
-    docLength: snapshot.docLength,
-    missingNote: snapshot.missingNote,
-    accumulatedWritingMs: snapshot.accumulatedWritingMs,
     sprintPoints: snapshot.sprintPoints,
-    resynced: true,
   };
-  if (snapshot.status === "PAUSED") return restored;
-  return thawClock(restored, now);
 }
 
 function sanitizeRecords(value: unknown): HighScores {
@@ -131,37 +85,18 @@ function sanitizeRecords(value: unknown): HighScores {
 
 function sanitizeSnapshot(value: unknown): ActiveSessionSnapshot | null {
   if (!value || typeof value !== "object") return null;
-  const raw = value as Partial<ActiveSessionSnapshot>;
-  if ((raw.status !== "RUNNING" && raw.status !== "PAUSED") || (raw.phase !== "THINKING" && raw.phase !== "WRITING")) {
-    return null;
-  }
+  const raw = value as Partial<ActiveSessionSnapshot> & { status?: string };
+  if (raw.status !== "RUNNING" && raw.status !== "PAUSED") return null;
   if (typeof raw.boundPath !== "string") return null;
   if (typeof raw.startedAt !== "number") return null;
   return {
-    status: raw.status,
-    phase: raw.phase,
+    status: "RUNNING",
     boundPath: raw.boundPath,
     credit: numberOr(raw.credit, 0),
     burstWords: numberOr(raw.burstWords, 0),
     elapsedTrackingMs: numberOr(raw.elapsedTrackingMs, 0),
-    accumulatedActiveMs: numberOr(raw.accumulatedActiveMs, 0),
-    remainingMs: numberOr(raw.remainingMs, 0),
-    roundsCompleted: numberOr(raw.roundsCompleted, 0),
-    peakIntervalWph: numberOr(raw.peakIntervalWph, 0),
-    intervalWords: numberOr(raw.intervalWords, 0),
-    intervalBurstWords: numberOr(raw.intervalBurstWords, 0),
-    intervalWritingMs: numberOr(raw.intervalWritingMs, 0),
-    trackingAtRoundStart: numberOr(raw.trackingAtRoundStart, 0),
-    creditAtIntervalStart: numberOr(raw.creditAtIntervalStart, 0),
-    writingGeneration: numberOr(raw.writingGeneration, 0),
-    goalCelebrated: raw.goalCelebrated === true,
     startedAt: raw.startedAt,
     savedAt: numberOr(raw.savedAt, raw.startedAt),
-    segmentCountsTowardTarget: raw.segmentCountsTowardTarget === true,
-    intervalDurationMs: numberOr(raw.intervalDurationMs, 0),
-    docLength: numberOr(raw.docLength, 0),
-    missingNote: raw.missingNote === true,
-    accumulatedWritingMs: numberOr(raw.accumulatedWritingMs, numberOr(raw.intervalWritingMs, 0)),
     sprintPoints: sprintPoints(raw.sprintPoints),
   };
 }

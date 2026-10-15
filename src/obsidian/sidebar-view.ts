@@ -1,5 +1,5 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
-import { formatActive, formatClock, formatDelta, formatTarget, progressRatio } from "../engine/format";
+import { formatActive, formatDelta, formatTarget } from "../engine/format";
 import type { HudModel } from "../types";
 import { VIEW_TYPE } from "../types";
 
@@ -7,9 +7,6 @@ export interface FocusFlowHost {
   getHud(): HudModel;
   start(): void;
   resumeSaved(): void;
-  togglePause(): void;
-  extend(minutes: 1 | 5): void;
-  skip(): void;
   end(): void;
   dismiss(): void;
   insertCallout(): Promise<void>;
@@ -19,17 +16,11 @@ export interface FocusFlowHost {
 interface RunningRefs {
   root: HTMLElement;
   summary: HTMLElement;
-  phase: HTMLElement;
-  clock: HTMLElement;
-  bar: HTMLElement;
   hero: HTMLElement;
   tone: HTMLElement;
   actual: HTMLElement;
   target: HTMLElement;
   note: HTMLElement;
-  resync: HTMLElement;
-  goal: HTMLElement;
-  pause: HTMLButtonElement;
 }
 
 export class FocusFlowView extends ItemView {
@@ -117,10 +108,6 @@ export class FocusFlowView extends ItemView {
   private buildRunning(): void {
     const root = this.contentEl.createDiv({ cls: "focus-flow" });
     const summary = root.createEl("p", { cls: "focus-flow-mobile-summary" });
-    const phase = root.createEl("p", { cls: "focus-flow-phase" });
-    const clock = root.createEl("p", { cls: "focus-flow-clock" });
-    const bar = root.createDiv({ cls: "focus-flow-bar" });
-    bar.createDiv({ cls: "focus-flow-bar-fill" });
     const hero = root.createDiv({ cls: "focus-flow-hero" });
     const value = hero.createEl("p", { cls: "focus-flow-delta" });
     const tone = hero.createEl("p", { cls: "focus-flow-tone" });
@@ -130,44 +117,23 @@ export class FocusFlowView extends ItemView {
     const counts = root.createDiv({ cls: "focus-flow-counts" });
     const actual = counts.createEl("p", { cls: "focus-flow-actual" });
     const target = counts.createEl("p", { cls: "focus-flow-target" });
-    const note = root.createEl("p", { cls: "focus-flow-note" });
-    const resync = root.createEl("p", { cls: "focus-flow-resync" });
-    const goal = root.createEl("p", { cls: "focus-flow-goal-line", attr: { "aria-live": "polite" } });
+    const note = root.createEl("p", { cls: "focus-flow-note", text: "Whole vault" });
     const controls = root.createDiv({ cls: "focus-flow-controls" });
-    const pause = controls.createEl("button", { cls: "focus-flow-button", attr: { type: "button" } });
-    pause.addEventListener("click", () => this.host.togglePause());
-    this.button(controls, "Add 1 minute", () => this.host.extend(1));
-    this.button(controls, "Add 5 minutes", () => this.host.extend(5));
-    this.button(controls, "Skip interval", () => this.host.skip());
-    this.button(controls, "End session", () => this.host.end());
-    this.running = { root, summary, phase, clock, bar, hero: value, tone, actual, target, note, resync, goal, pause };
+    this.button(controls, "Stop session", () => this.host.end());
+    this.running = { root, summary, hero: value, tone, actual, target, note };
   }
 
   private patchRunning(model: HudModel): void {
     const refs = this.running;
     if (!refs) return;
-    refs.root.classList.toggle("is-zen", model.hideTimer);
-    refs.root.classList.toggle("is-paused", model.status === "PAUSED");
-    refs.root.classList.toggle("is-celebrating", model.celebrate);
     refs.summary.setText(model.statusText);
-    refs.phase.setText(model.phase === "WRITING" ? "Writing" : "Thinking");
-    refs.clock.setText(formatClock(model.remainingMs));
-    const step = Math.round(progressRatio(model.remainingMs, model.intervalDurationMs) * 20);
-    refs.bar.className = `focus-flow-bar is-p${step}`;
     refs.hero.className = `focus-flow-delta is-${model.tone}`;
     refs.hero.setText(formatDelta(model.delta));
     refs.hero.setAttr("aria-label", `${formatDelta(model.delta)} ${model.tone}`);
     refs.tone.setText(model.tone);
-    refs.actual.setText(`Sprint words ${model.actualWords}`);
+    refs.actual.setText(`Words typed ${model.actualWords}`);
     refs.target.setText(`Ghost target ${formatTarget(model.targetWords)}`);
-    refs.note.setText(model.missingNote ? "That note is no longer in the vault." : "Whole vault");
-    refs.resync.setText(
-      model.resynced ? "Tracking resynced. Earlier text you delete will not change the counter." : "",
-    );
-    refs.resync.toggleClass("is-hidden", !model.resynced);
-    refs.goal.setText(model.celebrate ? "Goal reached." : "");
-    refs.goal.toggleClass("is-hidden", !model.celebrate);
-    refs.pause.setText(model.status === "PAUSED" ? "Resume" : "Pause");
+    refs.note.setText("Whole vault");
   }
 
   private buildCompleted(): void {
@@ -203,7 +169,6 @@ export class FocusFlowView extends ItemView {
   private patchCompleted(model: HudModel): void {
     const root = this.contentEl.querySelector(".focus-flow");
     if (!root || !model.debrief) return;
-    root.classList.add("is-celebrating");
     const delta = root.querySelector(".focus-flow-delta");
     const tone = root.querySelector(".focus-flow-tone");
     if (delta) {
@@ -217,8 +182,6 @@ export class FocusFlowView extends ItemView {
       list.createEl("li", { text: `Wrote ${model.debrief.words} words` });
       list.createEl("li", { text: `Ghost target ${formatTarget(model.debrief.targetWords)}` });
       list.createEl("li", { text: `Active ${formatActive(model.debrief.activeMs)}` });
-      list.createEl("li", { text: `${model.debrief.rounds} rounds` });
-      list.createEl("li", { text: `Peak ${Math.round(model.debrief.peakWph)} words per hour` });
     }
     const broken = root.querySelector(".focus-flow-broken");
     if (broken instanceof HTMLElement) {

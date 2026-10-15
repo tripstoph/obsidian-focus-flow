@@ -4,44 +4,9 @@ export function round1(value: number): string {
   return (Math.round(value * 10) / 10).toFixed(1);
 }
 
-export function formatMinutes(minutes: number): string {
-  const label = Number.isInteger(minutes) ? String(minutes) : round1(minutes);
-  return minutes === 1 ? "1 minute" : `${label} minutes`;
-}
-
-export function formatPace(settings: Pick<
-  FocusFlowSettings,
-  "wordsPerHour" | "thinkingMinutes" | "writingMinutes" | "thinkingCountsTowardTarget"
->): string {
+export function formatPace(settings: Pick<FocusFlowSettings, "wordsPerHour">): string {
   const wpm = settings.wordsPerHour / 60;
-  const base = `${settings.wordsPerHour} words per hour is about ${round1(wpm)} words per minute.`;
-  if (!settings.thinkingCountsTowardTarget) {
-    return `${base} During writing, that pace stays about ${round1(wpm)} words per minute.`;
-  }
-  const sprint =
-    (settings.wordsPerHour * (settings.thinkingMinutes + settings.writingMinutes)) /
-    settings.writingMinutes /
-    60;
-  return `${base} Across ${formatMinutes(settings.thinkingMinutes)} of thinking and ${formatMinutes(settings.writingMinutes)} of writing, that pace is about ${round1(sprint)} words per minute during writing.`;
-}
-
-export function writingWpmIfThinkingCounts(settings: Pick<
-  FocusFlowSettings,
-  "wordsPerHour" | "thinkingMinutes" | "writingMinutes"
->): number {
-  if (settings.writingMinutes <= 0) return settings.wordsPerHour / 60;
-  return (
-    (settings.wordsPerHour * (settings.thinkingMinutes + settings.writingMinutes)) /
-    settings.writingMinutes /
-    60
-  );
-}
-
-export function formatThinkingBurden(settings: Pick<
-  FocusFlowSettings,
-  "wordsPerHour" | "thinkingMinutes" | "writingMinutes"
->): string {
-  return `If the ghost advances during thinking, writing is about ${round1(writingWpmIfThinkingCounts(settings))} words per minute.`;
+  return `${settings.wordsPerHour} words per hour is about ${round1(wpm)} words per minute.`;
 }
 
 export function formatClock(ms: number): string {
@@ -95,8 +60,6 @@ export interface CalloutInput {
   targetWords: number;
   delta: number;
   activeMs: number;
-  rounds: number;
-  peakWph: number;
   burstWords: number;
 }
 
@@ -104,7 +67,7 @@ export function buildCallout(input: CalloutInput): string {
   const lines = [
     "> [!success] Focus Flow session",
     `> **Wrote** ${input.words} words · ghost ${Math.round(input.targetWords)} · delta ${formatDelta(input.delta)}`,
-    `> **Active** ${formatActive(input.activeMs)} · ${input.rounds} rounds · peak ${Math.round(input.peakWph)} WPH`,
+    `> **Active** ${formatActive(input.activeMs)}`,
   ];
   if (input.burstWords > 0) {
     lines.push(`> Includes ${input.burstWords} words added in large pastes.`);

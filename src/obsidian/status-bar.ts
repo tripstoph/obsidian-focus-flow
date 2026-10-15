@@ -6,5 +6,4 @@ export function renderStatus(el: HTMLElement, model: HudModel): void {
     text: model.statusText,
     cls: `focus-flow-status is-${model.tone}`,
   });
-  el.toggleClass("is-celebrating", model.celebrate);
 }
