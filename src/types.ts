@@ -98,6 +98,7 @@ export interface PersistedData {
   records: HighScores;
   history: SessionRecord[];
   activeSession: ActiveSessionSnapshot | null;
+  frozenScoreSession: number | null;
 }
 
 export const DEFAULT_SETTINGS: FocusFlowSettings = {

@@ -25,4 +25,11 @@ describe("sprint pace", () => {
     points = at(16, 210, points);
     assert.equal(sprintPaceWph(points, 16 * 60_000), 800);
   });
+
+  it("scores a full 15 minutes from the middle of a longer session", () => {
+    let points = at(61, 100);
+    points = at(74, 600, points);
+    points = at(90, 610, points);
+    assert.equal(sprintPaceWph(points, 90 * 60_000), (600 * 3_600_000) / SPRINT_WINDOW_MS);
+  });
 });

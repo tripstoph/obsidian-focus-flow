@@ -1,6 +1,6 @@
 {
   "name": "focus-flow",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Pace a writing session against a gentle words-per-hour ghost.",
   "main": "main.js",

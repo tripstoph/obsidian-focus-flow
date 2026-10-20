@@ -28,6 +28,10 @@ export class FocusFlowSettingTab extends PluginSettingTab {
       settings.wordsPerHour = parsed;
       return null;
     });
+    const reset = new Setting(containerEl)
+      .setName("High scores")
+      .setDesc("Clear sprint pace, volume, marathon, and the positive delta streak.");
+    this.addReset(reset);
   }
 
   override getSettingDefinitions(): SettingDefinitionItem[] {
@@ -50,6 +54,13 @@ export class FocusFlowSettingTab extends PluginSettingTab {
           validate: (value) => (parseWordsPerHour(value) == null ? "Enter a whole number from 50 to 5,000." : undefined),
         },
       },
+      {
+        name: "High scores",
+        desc: "Clear sprint pace, volume, marathon, and the positive delta streak.",
+        render: (setting) => {
+          this.addReset(setting);
+        },
+      },
     ];
   }
 
@@ -65,6 +76,15 @@ export class FocusFlowSettingTab extends PluginSettingTab {
     this.focus.settings.wordsPerHour = parsed;
     await this.persist();
     if (requireApiVersion("1.13.0")) this.refreshDomState();
+  }
+
+  private addReset(setting: Setting): void {
+    setting.addButton((button) => {
+      button.setButtonText("Reset high scores").onClick(() => {
+        this.focus.resetHighScores();
+      });
+      if (requireApiVersion("1.13.0")) button.setDestructive();
+    });
   }
 
   private addNumber(

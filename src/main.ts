@@ -1,4 +1,4 @@
-import { MarkdownView, normalizePath, Platform, Plugin, TFile } from "obsidian";
+import { MarkdownView, normalizePath, Notice, Platform, Plugin, TFile } from "obsidian";
 import { activeMs, writingMs } from "./engine/clock";
 import { buildCallout, brokenLabels, deltaTone, formatDelta } from "./engine/format";
 import { dismissSession, endSession, startSession, suspendSession, tickSession, type EngineEvent } from "./engine/fsm";
@@ -14,6 +14,7 @@ import { renderStatus } from "./obsidian/status-bar";
 import { migrate, pushHistory, sessionFromSnapshot, toSnapshot } from "./persistence/store";
 import { FocusFlowSettingTab } from "./settings";
 import {
+  emptyRecords,
   idleSession,
   VIEW_TYPE,
   type ActiveSessionSnapshot,
@@ -34,6 +35,7 @@ export default class FocusFlowPlugin extends Plugin {
   private history: SessionRecord[] = [];
   private pending: ActiveSessionSnapshot | null = null;
   private recordsAtStart: HighScores = this.data.records;
+  private frozenScoreSession: number | null = null;
   private debrief: Debrief | null = null;
   private completedPath: string | null = null;
   private lastTick: number | null = null;
@@ -54,6 +56,7 @@ export default class FocusFlowPlugin extends Plugin {
     this.history = this.data.history;
     this.pending = this.data.activeSession;
     this.recordsAtStart = { ...this.records };
+    this.frozenScoreSession = this.data.frozenScoreSession;
     this.gate.onEdit = (edit) => this.handleEdit(edit);
 
     this.addSettingTab(new FocusFlowSettingTab(this.app, this));
@@ -119,6 +122,16 @@ export default class FocusFlowPlugin extends Plugin {
     this.refresh();
   }
 
+  resetHighScores(): void {
+    this.records = emptyRecords();
+    this.recordsAtStart = emptyRecords();
+    this.frozenScoreSession =
+      this.session.status === "RUNNING" && this.session.startedAt != null ? this.session.startedAt : null;
+    this.refresh();
+    void this.persistNow();
+    new Notice("High scores reset.");
+  }
+
   getHud(): HudModel {
     const now = Date.now();
     const target = targetWords(this.settings.wordsPerHour, activeMs(this.session, now));
@@ -150,6 +163,7 @@ export default class FocusFlowPlugin extends Plugin {
     this.debrief = null;
     this.completedPath = null;
     this.recordsAtStart = { ...this.records };
+    this.frozenScoreSession = null;
     const view = this.writingView();
     const path = view?.file ? normalizePath(view.file.path) : null;
     const now = Date.now();
@@ -268,16 +282,18 @@ export default class FocusFlowPlugin extends Plugin {
   private adopt(state: SessionState, events: EngineEvent[], now: number): void {
     const statusBefore = this.session.status;
     this.session = state;
-    let records = applySprintPace(this.records, sprintPaceWph(state.sprintPoints, writingMs(state, now)), now);
-    records = applyVolume(records, state.credit, now);
-    records = applyMarathon(records, activeMs(state, now), now);
-    this.records = records;
+    if (this.scoresOpen(state)) {
+      let records = applySprintPace(this.records, sprintPaceWph(state.sprintPoints, writingMs(state, now)), now);
+      records = applyVolume(records, state.credit, now);
+      records = applyMarathon(records, activeMs(state, now), now);
+      this.records = records;
+    }
     this.gate.listening = state.status === "RUNNING";
 
     for (const event of events) {
       if (event.type === "completed") {
         const delta = state.credit - targetWords(this.settings.wordsPerHour, state.accumulatedTrackingMs);
-        this.records = applySessionDelta(this.records, delta, now);
+        if (this.scoresOpen(state)) this.records = applySessionDelta(this.records, delta, now);
         this.completedPath = this.writingView()?.file?.path ?? state.boundPath ?? this.completedPath;
         this.debrief = this.makeDebrief(state);
         this.history = pushHistory(this.history, this.makeRecord(state, now));
@@ -338,8 +354,14 @@ export default class FocusFlowPlugin extends Plugin {
       this.adopt(step.state, step.events, now);
       return;
     }
-    this.records = applyMarathon(this.records, activeMs(this.session, now), now);
-    this.records = applySprintPace(this.records, sprintPaceWph(this.session.sprintPoints, writingMs(this.session, now)), now);
+    if (this.scoresOpen(this.session)) {
+      this.records = applyMarathon(this.records, activeMs(this.session, now), now);
+      this.records = applySprintPace(
+        this.records,
+        sprintPaceWph(this.session.sprintPoints, writingMs(this.session, now)),
+        now,
+      );
+    }
     this.refresh();
     this.schedulePersist();
     this.armTimer();
@@ -427,6 +449,7 @@ export default class FocusFlowPlugin extends Plugin {
     this.data.settings = this.settings;
     this.data.records = this.records;
     this.data.history = this.history;
+    this.data.frozenScoreSession = this.frozenScoreSession;
     this.data.activeSession =
       toSnapshot(this.session, Date.now()) ?? (this.session.status === "IDLE" ? this.pending : null);
     try {
@@ -434,6 +457,10 @@ export default class FocusFlowPlugin extends Plugin {
     } catch (error) {
       console.error("Focus Flow could not save its data.", error);
     }
+  }
+
+  private scoresOpen(state: SessionState): boolean {
+    return this.frozenScoreSession == null || state.startedAt !== this.frozenScoreSession;
   }
 
   private async reloadSettings(): Promise<void> {

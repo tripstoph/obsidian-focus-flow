@@ -20,6 +20,7 @@ export function emptyData(): PersistedData {
     records: emptyRecords(),
     history: [],
     activeSession: null,
+    frozenScoreSession: null,
   };
 }
 
@@ -32,6 +33,7 @@ export function migrate(raw: unknown): PersistedData {
     records: sanitizeRecords(data.records),
     history,
     activeSession: sanitizeSnapshot(data.activeSession),
+    frozenScoreSession: stamp(data.frozenScoreSession),
   };
 }
 
