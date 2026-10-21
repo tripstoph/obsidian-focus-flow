@@ -11,6 +11,11 @@ export interface SessionConfig {
   wordsPerHour: number;
 }
 
+export interface NoteCount {
+  baseline: number;
+  current: number;
+}
+
 export interface SessionState {
   status: SessionStatus;
   boundPath: string | null;
@@ -20,6 +25,7 @@ export interface SessionState {
   credit: number;
   burstWords: number;
   sprintPoints: SprintPoint[];
+  noteCounts: Record<string, NoteCount>;
 }
 
 export interface SprintPoint {
@@ -64,6 +70,7 @@ export interface ActiveSessionSnapshot {
   startedAt: number;
   savedAt: number;
   sprintPoints: SprintPoint[];
+  noteCounts: Record<string, NoteCount>;
 }
 
 export interface Debrief {
@@ -72,6 +79,7 @@ export interface Debrief {
   delta: number;
   activeMs: number;
   burstWords: number;
+  notesDelta: number;
   broken: string[];
   callout: string;
 }
@@ -87,6 +95,9 @@ export interface HudModel {
   tone: DeltaTone;
   deltaLabel: string;
   burstWords: number;
+  noteDelta: number | null;
+  notesDelta: number;
+  noteFiles: number;
   records: HighScores;
   debrief: Debrief | null;
   statusText: string;
@@ -129,6 +140,7 @@ export function idleSession(): SessionState {
     credit: 0,
     burstWords: 0,
     sprintPoints: [],
+    noteCounts: {},
   };
 }
 

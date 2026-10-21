@@ -31,6 +31,18 @@ describe("words typed", () => {
     assert.equal(step.state.burstWords, 40);
   });
 
+  it("drops a large paste when that paste is undone", () => {
+    const started = startSession(0, "note.md");
+    const paste = Array.from({ length: 40 }, (_, index) => `word${index}`).join(" ");
+    const pasted = applyEdit(started.state, editInDocument("", 0, 0, paste), 0);
+    const undone = applyEdit(pasted.state, editInDocument(paste, 0, paste.length, "", "note.md", 0, "undo"), 1);
+    assert.equal(undone.state.credit, 0);
+    assert.equal(undone.state.burstWords, 0);
+    const redone = applyEdit(undone.state, editInDocument("", 0, 0, paste, "note.md", 0, "redo"), 2);
+    assert.equal(redone.state.credit, 0);
+    assert.equal(redone.state.burstWords, 40);
+  });
+
   it("ignores an edit that stays inside frontmatter", () => {
     const doc = "---\ntags: [a]\n---\n";
     assert.ok(frontmatterEnd(doc) > doc.indexOf("a"));

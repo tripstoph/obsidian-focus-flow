@@ -1,12 +1,13 @@
 import { MarkdownView, normalizePath, Notice, Platform, Plugin, TFile } from "obsidian";
 import { activeMs, writingMs } from "./engine/clock";
+import { noteDelta, notesDelta } from "./engine/obsidian-count";
 import { buildCallout, brokenLabels, deltaTone, formatDelta } from "./engine/format";
 import { dismissSession, endSession, startSession, suspendSession, tickSession, type EngineEvent } from "./engine/fsm";
 import { targetWords } from "./engine/ghost";
 import { applyMarathon, applySessionDelta, applySprintPace, applyVolume } from "./engine/records";
 import { sprintPaceWph } from "./engine/sprint-pace";
 import { applyEdit } from "./engine/session";
-import type { PreparedEdit } from "./engine/word-ledger";
+import { isMarkdownPath, obsidianWordCount, type PreparedEdit } from "./engine/word-ledger";
 import { appendCallout } from "./obsidian/callout";
 import { createEditorExtension, type EditorGate } from "./obsidian/editor-bridge";
 import { FocusFlowView } from "./obsidian/sidebar-view";
@@ -76,6 +77,7 @@ export default class FocusFlowPlugin extends Plugin {
 
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", () => {
+        this.seedOpenNote();
         this.refresh();
       }),
     );
@@ -139,6 +141,7 @@ export default class FocusFlowPlugin extends Plugin {
     const tone = deltaTone(this.debrief && this.session.status === "COMPLETED" ? this.debrief.delta : delta);
     const note = this.writingView();
     const activeFile = note?.file ?? null;
+    const activePath = activeFile ? normalizePath(activeFile.path) : null;
     const shownDelta = this.session.status === "COMPLETED" && this.debrief ? this.debrief.delta : delta;
     return {
       status: this.session.status,
@@ -151,6 +154,9 @@ export default class FocusFlowPlugin extends Plugin {
       tone,
       deltaLabel: tone,
       burstWords: this.session.burstWords,
+      noteDelta: noteDelta(this.session.noteCounts, activePath),
+      notesDelta: notesDelta(this.session.noteCounts),
+      noteFiles: Object.keys(this.session.noteCounts).length,
       records: this.records,
       debrief: this.session.status === "COMPLETED" ? this.debrief : null,
       statusText: statusText(this.session, shownDelta),
@@ -170,6 +176,8 @@ export default class FocusFlowPlugin extends Plugin {
     this.lastTick = now;
     const step = startSession(now, path);
     this.adopt(step.state, step.events, now);
+    this.seedOpenNote();
+    this.refresh();
   }
 
   resumeSaved(): void {
@@ -181,6 +189,8 @@ export default class FocusFlowPlugin extends Plugin {
     this.debrief = null;
     this.lastTick = now;
     this.adopt(state, [], now);
+    this.seedOpenNote();
+    this.refresh();
   }
 
   end(): void {
@@ -316,6 +326,7 @@ export default class FocusFlowPlugin extends Plugin {
       delta,
       activeMs: state.accumulatedTrackingMs,
       burstWords: state.burstWords,
+      notesDelta: notesDelta(state.noteCounts),
       broken: brokenLabels(this.recordsAtStart, this.records),
       callout: buildCallout({
         words: state.credit,
@@ -413,8 +424,31 @@ export default class FocusFlowPlugin extends Plugin {
 
   private hiddenAt: number | null = null;
 
+  private seedOpenNote(): void {
+    if (this.session.status !== "RUNNING") return;
+    const view = this.writingView();
+    const file = view?.file;
+    const editor = view?.editor;
+    if (!file || !editor) return;
+    const path = normalizePath(file.path);
+    if (!isMarkdownPath(path) || this.session.noteCounts[path]) return;
+    const words = obsidianWordCount(editor.getValue());
+    this.session = {
+      ...this.session,
+      noteCounts: { ...this.session.noteCounts, [path]: { baseline: words, current: words } },
+    };
+    this.schedulePersist();
+  }
+
   private renameBound(from: string, to: string): void {
     if (this.session.boundPath === from) this.session = { ...this.session, boundPath: to };
+    const counted = this.session.noteCounts[from];
+    if (counted) {
+      const noteCounts = { ...this.session.noteCounts };
+      noteCounts[to] = counted;
+      delete noteCounts[from];
+      this.session = { ...this.session, noteCounts };
+    }
     if (this.lastNotePath === from) this.lastNotePath = to;
     if (this.pending?.boundPath === from) this.pending = { ...this.pending, boundPath: to };
     if (this.completedPath === from) this.completedPath = to;

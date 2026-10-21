@@ -4,6 +4,7 @@ import { ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import {
   frontmatterEnd,
   isMarkdownPath,
+  obsidianWordCount,
   trimContextAfter,
   trimContextBefore,
   type PreparedEdit,
@@ -57,5 +58,8 @@ export function editFromTransaction(transaction: Transaction, path: string): Pre
     frontmatterEnd: frontmatterEnd(head),
     changes,
     changeSet: transaction.changes,
+    userEvent: transaction.annotation(Transaction.userEvent) ?? null,
+    wordsBefore: obsidianWordCount(doc.toString()),
+    wordsAfter: obsidianWordCount(transaction.newDoc.toString()),
   };
 }

@@ -125,6 +125,10 @@ body.is-mobile .focus-flow-mobile-summary {
   margin: 0.2em 0;
 }
 
+.focus-flow-counts p:empty {
+  display: none;
+}
+
 .focus-flow-controls,
 .focus-flow-actions {
   display: flex;

@@ -22,6 +22,9 @@ export interface PreparedEdit {
   frontmatterEnd: number;
   changes: TextChange[];
   changeSet: ChangeDesc;
+  userEvent: string | null;
+  wordsBefore: number;
+  wordsAfter: number;
 }
 
 export interface TypedWords {
@@ -40,6 +43,15 @@ export function wordsTypedInEdit(edit: PreparedEdit): TypedWords {
     else typed += added;
   }
   return { typed, burst };
+}
+
+export function wordsRemovedInEdit(edit: PreparedEdit): number {
+  let removed = 0;
+  for (const change of edit.changes) {
+    if (isInsideFrontmatter(change, edit.frontmatterEnd)) continue;
+    removed += wordsRemoved(change);
+  }
+  return removed;
 }
 
 export function isWordChar(char: string): boolean {
@@ -77,6 +89,13 @@ export function trimContextAfter(slice: string, truncated: boolean): string {
   return slice.slice(0, index);
 }
 
+export function obsidianWordCount(text: string): number {
+  const end = frontmatterEnd(text);
+  const body = end > 0 ? text.slice(end) : text;
+  const matches = body.match(/\S+/g);
+  return matches ? matches.length : 0;
+}
+
 export function isMarkdownPath(path: string): boolean {
   return path.toLowerCase().endsWith(".md");
 }
@@ -88,8 +107,10 @@ export function editInDocument(
   insert: string,
   path = "note.md",
   matterEnd = frontmatterEnd(doc.slice(0, Math.min(doc.length, 20_000))),
+  userEvent: string | null = "input",
 ): PreparedEdit {
   const deleted = doc.slice(from, to);
+  const next = doc.slice(0, from) + insert + doc.slice(to);
   const leftSliceStart = Math.max(0, from - 80);
   const rightSliceEnd = Math.min(doc.length, to + 80);
   const changeSet = ChangeSet.of([{ from, to, insert }], doc.length);
@@ -111,6 +132,9 @@ export function editInDocument(
         right: trimContextAfter(doc.slice(to, rightSliceEnd), rightSliceEnd < doc.length),
       },
     ],
+    userEvent,
+    wordsBefore: obsidianWordCount(doc),
+    wordsAfter: obsidianWordCount(next),
   };
 }
 
@@ -122,4 +146,10 @@ function wordsAdded(change: TextChange): number {
   const before = countWords(change.left + change.right);
   const after = countWords(change.left + change.inserted + change.right);
   return Math.max(0, after - before);
+}
+
+function wordsRemoved(change: TextChange): number {
+  const before = countWords(change.left + change.deleted + change.right);
+  const after = countWords(change.left + change.inserted + change.right);
+  return Math.max(0, before - after);
 }

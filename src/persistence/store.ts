@@ -7,6 +7,7 @@ import {
   type HighScores,
   type PersistedData,
   type SessionRecord,
+  type NoteCount,
   type SessionState,
   type SprintPoint,
 } from "../types";
@@ -52,6 +53,7 @@ export function toSnapshot(state: SessionState, now: number): ActiveSessionSnaps
     startedAt: state.startedAt,
     savedAt: now,
     sprintPoints: state.sprintPoints,
+    noteCounts: state.noteCounts,
   };
 }
 
@@ -66,6 +68,7 @@ export function sessionFromSnapshot(snapshot: ActiveSessionSnapshot, now: number
     credit: snapshot.credit,
     burstWords: snapshot.burstWords,
     sprintPoints: snapshot.sprintPoints,
+    noteCounts: snapshot.noteCounts,
   };
 }
 
@@ -100,7 +103,20 @@ function sanitizeSnapshot(value: unknown): ActiveSessionSnapshot | null {
     startedAt: raw.startedAt,
     savedAt: numberOr(raw.savedAt, raw.startedAt),
     sprintPoints: sprintPoints(raw.sprintPoints),
+    noteCounts: noteCounts(raw.noteCounts),
   };
+}
+
+function noteCounts(value: unknown): Record<string, NoteCount> {
+  if (!value || typeof value !== "object") return {};
+  const counts: Record<string, NoteCount> = {};
+  for (const [path, entry] of Object.entries(value)) {
+    if (!entry || typeof entry !== "object") continue;
+    const raw = entry as Partial<NoteCount>;
+    if (typeof raw.baseline !== "number" || typeof raw.current !== "number") continue;
+    counts[path] = { baseline: raw.baseline, current: raw.current };
+  }
+  return counts;
 }
 
 function sprintPoints(value: unknown): SprintPoint[] {

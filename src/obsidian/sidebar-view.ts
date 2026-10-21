@@ -1,5 +1,5 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
-import { formatActive, formatDelta, formatTarget } from "../engine/format";
+import { formatActive, formatBurst, formatDelta, formatTarget } from "../engine/format";
 import type { HudModel } from "../types";
 import { VIEW_TYPE } from "../types";
 
@@ -20,6 +20,8 @@ interface RunningRefs {
   tone: HTMLElement;
   actual: HTMLElement;
   target: HTMLElement;
+  noteDelta: HTMLElement;
+  notesDelta: HTMLElement;
   note: HTMLElement;
 }
 
@@ -116,11 +118,13 @@ export class FocusFlowView extends ItemView {
     }
     const counts = root.createDiv({ cls: "focus-flow-counts" });
     const actual = counts.createEl("p", { cls: "focus-flow-actual" });
+    const noteDelta = counts.createEl("p", { cls: "focus-flow-note-delta" });
+    const notesDelta = counts.createEl("p", { cls: "focus-flow-notes-delta" });
     const target = counts.createEl("p", { cls: "focus-flow-target" });
     const note = root.createEl("p", { cls: "focus-flow-note", text: "Whole vault" });
     const controls = root.createDiv({ cls: "focus-flow-controls" });
     this.button(controls, "Stop session", () => this.host.end());
-    this.running = { root, summary, hero: value, tone, actual, target, note };
+    this.running = { root, summary, hero: value, tone, actual, target, noteDelta, notesDelta, note };
   }
 
   private patchRunning(model: HudModel): void {
@@ -132,6 +136,8 @@ export class FocusFlowView extends ItemView {
     refs.hero.setAttr("aria-label", `${formatDelta(model.delta)} ${model.tone}`);
     refs.tone.setText(model.tone);
     refs.actual.setText(`Words typed ${model.actualWords}`);
+    refs.noteDelta.setText(model.noteDelta == null ? "" : `This note ${formatDelta(model.noteDelta)}`);
+    refs.notesDelta.setText(model.noteFiles > 1 ? `All notes ${formatDelta(model.notesDelta)}` : "");
     refs.target.setText(`Ghost target ${formatTarget(model.targetWords)}`);
     refs.note.setText("Whole vault");
   }
@@ -180,6 +186,7 @@ export class FocusFlowView extends ItemView {
     if (list instanceof HTMLElement) {
       list.empty();
       list.createEl("li", { text: `Wrote ${model.debrief.words} words` });
+      list.createEl("li", { text: `Note count ${formatDelta(model.debrief.notesDelta)}` });
       list.createEl("li", { text: `Ghost target ${formatTarget(model.debrief.targetWords)}` });
       list.createEl("li", { text: `Active ${formatActive(model.debrief.activeMs)}` });
     }
@@ -190,9 +197,7 @@ export class FocusFlowView extends ItemView {
     }
     const burst = root.querySelector(".focus-flow-burst");
     if (burst) {
-      burst.setText(
-        model.debrief.burstWords > 0 ? `Includes ${model.debrief.burstWords} words added in large pastes.` : "",
-      );
+      burst.setText(formatBurst(model.debrief.burstWords));
     }
   }
 

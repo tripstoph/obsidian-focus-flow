@@ -63,15 +63,19 @@ export interface CalloutInput {
   burstWords: number;
 }
 
+export function formatBurst(words: number): string {
+  if (words <= 0) return "";
+  return `Left out ${words} words from large pastes.`;
+}
+
 export function buildCallout(input: CalloutInput): string {
   const lines = [
     "> [!success] Focus Flow session",
     `> **Wrote** ${input.words} words · ghost ${Math.round(input.targetWords)} · delta ${formatDelta(input.delta)}`,
     `> **Active** ${formatActive(input.activeMs)}`,
   ];
-  if (input.burstWords > 0) {
-    lines.push(`> Includes ${input.burstWords} words added in large pastes.`);
-  }
+  const burst = formatBurst(input.burstWords);
+  if (burst.length > 0) lines.push(`> ${burst}`);
   return lines.join("\n");
 }
 
