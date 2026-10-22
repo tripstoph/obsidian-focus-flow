@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { brokenLabels, buildCallout, formatPace, formatTarget } from "../../src/engine/format";
+import { buildCallout, formatPace, formatTarget } from "../../src/engine/format";
 import { parseWordsPerHour, sanitizeSettings } from "../../src/engine/validate";
-import { emptyRecords } from "../../src/types";
 
 describe("formatPace", () => {
   it("states the pace in words per minute", () => {
@@ -35,7 +34,6 @@ describe("callout", () => {
       targetWords: 380.4,
       delta: 40,
       activeMs: 48 * 60_000,
-      burstWords: 0,
     });
     assert.equal(
       callout,
@@ -44,12 +42,5 @@ describe("callout", () => {
       ),
     );
     assert.equal(formatTarget(380.44), "380.4");
-  });
-
-  it("names a record only when the new value is greater", () => {
-    const before = emptyRecords();
-    const after = { ...before, volumeRecordWords: 12, positiveDeltaStreak: 2 };
-    assert.deepEqual(brokenLabels(before, after), ["Volume record", "Positive delta streak"]);
-    assert.deepEqual(brokenLabels(after, after), []);
   });
 });

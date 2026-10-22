@@ -11,11 +11,6 @@ export interface SessionConfig {
   wordsPerHour: number;
 }
 
-export interface NoteCount {
-  baseline: number;
-  current: number;
-}
-
 export interface SessionState {
   status: SessionStatus;
   boundPath: string | null;
@@ -23,26 +18,6 @@ export interface SessionState {
   segmentStartedAt: number | null;
   accumulatedTrackingMs: number;
   credit: number;
-  burstWords: number;
-  sprintPoints: SprintPoint[];
-  noteCounts: Record<string, NoteCount>;
-}
-
-export interface SprintPoint {
-  writingMs: number;
-  words: number;
-}
-
-export interface HighScores {
-  apexSprintWph: number;
-  apexSprintAt: number | null;
-  volumeRecordWords: number;
-  volumeRecordAt: number | null;
-  flowMarathonMs: number;
-  flowMarathonAt: number | null;
-  positiveDeltaStreak: number;
-  positiveDeltaStreakAt: number | null;
-  currentPositiveDeltaStreak: number;
 }
 
 export interface SessionRecord {
@@ -65,12 +40,9 @@ export interface ActiveSessionSnapshot {
   status: "RUNNING";
   boundPath: string;
   credit: number;
-  burstWords: number;
   elapsedTrackingMs: number;
   startedAt: number;
   savedAt: number;
-  sprintPoints: SprintPoint[];
-  noteCounts: Record<string, NoteCount>;
 }
 
 export interface Debrief {
@@ -78,9 +50,6 @@ export interface Debrief {
   targetWords: number;
   delta: number;
   activeMs: number;
-  burstWords: number;
-  notesDelta: number;
-  broken: string[];
   callout: string;
 }
 
@@ -88,17 +57,11 @@ export interface HudModel {
   status: SessionStatus;
   activeFileName: string | null;
   canStart: boolean;
-  resumeAvailable: boolean;
   actualWords: number;
   targetWords: number;
   delta: number;
   tone: DeltaTone;
   deltaLabel: string;
-  burstWords: number;
-  noteDelta: number | null;
-  notesDelta: number;
-  noteFiles: number;
-  records: HighScores;
   debrief: Debrief | null;
   statusText: string;
 }
@@ -106,29 +69,13 @@ export interface HudModel {
 export interface PersistedData {
   version: 1;
   settings: FocusFlowSettings;
-  records: HighScores;
   history: SessionRecord[];
   activeSession: ActiveSessionSnapshot | null;
-  frozenScoreSession: number | null;
 }
 
 export const DEFAULT_SETTINGS: FocusFlowSettings = {
   wordsPerHour: 500,
 };
-
-export function emptyRecords(): HighScores {
-  return {
-    apexSprintWph: 0,
-    apexSprintAt: null,
-    volumeRecordWords: 0,
-    volumeRecordAt: null,
-    flowMarathonMs: 0,
-    flowMarathonAt: null,
-    positiveDeltaStreak: 0,
-    positiveDeltaStreakAt: null,
-    currentPositiveDeltaStreak: 0,
-  };
-}
 
 export function idleSession(): SessionState {
   return {
@@ -138,9 +85,6 @@ export function idleSession(): SessionState {
     segmentStartedAt: null,
     accumulatedTrackingMs: 0,
     credit: 0,
-    burstWords: 0,
-    sprintPoints: [],
-    noteCounts: {},
   };
 }
 

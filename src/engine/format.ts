@@ -60,43 +60,12 @@ export interface CalloutInput {
   targetWords: number;
   delta: number;
   activeMs: number;
-  burstWords: number;
-}
-
-export function formatBurst(words: number): string {
-  if (words <= 0) return "";
-  return `Left out ${words} words from large pastes.`;
 }
 
 export function buildCallout(input: CalloutInput): string {
-  const lines = [
+  return [
     "> [!success] Focus Flow session",
     `> **Wrote** ${input.words} words · ghost ${Math.round(input.targetWords)} · delta ${formatDelta(input.delta)}`,
     `> **Active** ${formatActive(input.activeMs)}`,
-  ];
-  const burst = formatBurst(input.burstWords);
-  if (burst.length > 0) lines.push(`> ${burst}`);
-  return lines.join("\n");
-}
-
-export function brokenLabels(
-  before: {
-    apexSprintWph: number;
-    volumeRecordWords: number;
-    flowMarathonMs: number;
-    positiveDeltaStreak: number;
-  },
-  after: {
-    apexSprintWph: number;
-    volumeRecordWords: number;
-    flowMarathonMs: number;
-    positiveDeltaStreak: number;
-  },
-): string[] {
-  const labels: string[] = [];
-  if (after.apexSprintWph > before.apexSprintWph) labels.push("Sprint pace");
-  if (after.volumeRecordWords > before.volumeRecordWords) labels.push("Volume record");
-  if (after.flowMarathonMs > before.flowMarathonMs) labels.push("Flow marathon");
-  if (after.positiveDeltaStreak > before.positiveDeltaStreak) labels.push("Positive delta streak");
-  return labels;
+  ].join("\n");
 }

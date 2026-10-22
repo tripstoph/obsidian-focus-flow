@@ -1,4 +1,4 @@
-import { foldSegment, shiftForSuspend } from "./clock";
+import { foldSegment } from "./clock";
 import { idleSession, type SessionState } from "../types";
 
 export type EngineEvent = { type: "completed" };
@@ -20,18 +20,6 @@ export function startSession(now: number, boundPath: string | null): StepResult 
     startedAt: now,
     segmentStartedAt: now,
   });
-}
-
-export function tickSession(state: SessionState, now: number, lastTick: number | null): StepResult {
-  if (state.status !== "RUNNING") return result(state);
-  if (lastTick != null && now - lastTick >= 2_000) {
-    return result(shiftForSuspend(state, now - lastTick));
-  }
-  return result(state);
-}
-
-export function suspendSession(state: SessionState, gapMs: number): StepResult {
-  return result(shiftForSuspend(state, gapMs));
 }
 
 export function endSession(state: SessionState, now: number): StepResult {

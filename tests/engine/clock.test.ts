@@ -1,24 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { trackingMs } from "../../src/engine/clock";
-import { endSession, startSession, suspendSession, tickSession } from "../../src/engine/fsm";
+import { endSession, startSession } from "../../src/engine/fsm";
 import { targetWords } from "../../src/engine/ghost";
 
 describe("clock and session machine", () => {
-  it("shifts a two-hour suspend without feeding the ghost", () => {
+  it("keeps the ghost moving through a two-hour gap", () => {
     const start = 1_000_000;
     const gap = 7_200_000;
     const started = startSession(start, "note.md");
-    const suspended = suspendSession(started.state, gap);
     const now = start + gap;
-    assert.equal(suspended.state.segmentStartedAt, start + gap);
-    assert.equal(trackingMs(suspended.state, now), 0);
-    assert.equal(targetWords(500, trackingMs(suspended.state, now)), 0);
-
-    const workedUntil = start + 10_000;
-    const ticked = tickSession(started.state, workedUntil + gap, workedUntil);
-    assert.equal(trackingMs(ticked.state, workedUntil + gap), 10_000);
-    assert.equal(targetWords(500, trackingMs(ticked.state, workedUntil + gap)), (500 / 3600) * 10);
+    assert.equal(trackingMs(started.state, now), gap);
+    assert.equal(targetWords(500, trackingMs(started.state, now)), (500 / 3600) * (gap / 1000));
+    const ended = endSession(started.state, now);
+    assert.equal(ended.state.accumulatedTrackingMs, gap);
   });
 
   it("counts the whole session until stop", () => {
